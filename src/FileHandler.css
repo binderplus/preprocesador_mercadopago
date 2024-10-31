@@ -1,0 +1,38 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    border: 3px dashed;
+    border-radius: 10px;
+    transition: .25s ease-in-out;
+    padding: 20px
+}
+
+.neutral {
+    border-color: #a3b8cc;
+    background-color: #F8F9FA;
+    color: #334d66;
+}
+
+.green {
+    border-color: #a3ccb1;
+    background-color: #e1fae9;
+    color: #336644;
+}
+
+.red {
+    border-color: #cca7a3;
+    background-color: #fae3e1;
+    color: #663733;
+}
+
+p {
+    max-width: 500px
+}
+
+svg {
+    width: 200px;
+    height: 100px;
+}
