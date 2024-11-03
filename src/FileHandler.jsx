@@ -13,13 +13,13 @@ export const FileHandler = () => {
         let result;
         try {
             result = await process(acceptedFiles[0])
+            console.log(result)
+            setState("initial")
         } catch (error) {
-            setState("error")
             console.error(error)
             setError(error)
-            return
+            setState("error")
         }
-        setState("initial")
     }, [])
 
     const {getRootProps, getInputProps, isDragAccept, isDragReject} = useDropzone({
