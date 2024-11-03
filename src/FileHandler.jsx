@@ -2,7 +2,7 @@ import {useCallback, useState} from 'react'
 import {useDropzone} from 'react-dropzone'
 import {FaFileArrowUp, FaFileCircleCheck, FaFileCircleXmark, FaHourglassHalf} from "react-icons/fa6";
 import {process} from "./Preprocessor.js";
-import './FileHandler.css'
+import styles from './FileHandler.module.css'
 
 export const FileHandler = () => {
     const [state, setState] = useState("initial")
@@ -13,13 +13,13 @@ export const FileHandler = () => {
         let result;
         try {
             result = await process(acceptedFiles[0])
+            console.log(result)
+            setState("initial")
         } catch (error) {
-            setState("error")
             console.error(error)
             setError(error)
-            return
+            setState("error")
         }
-        setState("initial")
     }, [])
 
     const {getRootProps, getInputProps, isDragAccept, isDragReject} = useDropzone({
@@ -46,28 +46,28 @@ export const FileHandler = () => {
     if (state === "error") {
         Icon = FaHourglassHalf
         message = error
-        containerColor = "red"
+        containerColor = styles.red
     }
 
     if (state === "processing") {
         Icon = FaHourglassHalf
         message = "Procesando..."
-        containerColor = "green"
+        containerColor = styles.green
     }
 
     if (state !== "processing") {
         if (isDragAccept) {
             Icon = FaFileCircleCheck
             message = "Suelte aquí..."
-            containerColor = "green"
+            containerColor = styles.green
         } else if (isDragReject) {
             Icon = FaFileCircleXmark
             message = "Solo archivos .csv o .xlsx"
-            containerColor = "red"
+            containerColor = styles.red
         }
     }
 
-    const containerClass = "container " + containerColor
+    const containerClass = styles.container + " " + containerColor
 
     return (<div {...getRootProps({className: containerClass})}>
         <input {...getInputProps()} />
