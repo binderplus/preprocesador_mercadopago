@@ -96,7 +96,9 @@ function applyTransposeRules(originalRow, updatedRow) {
     for (const [column, rule] of Object.entries(transposeRules)) {
         if (column in originalRow) {
             try {
-                newRows.push(...rule(originalRow, updatedRow))
+                const rows = rule(originalRow, updatedRow)
+                recalculateBalanceAmount(updatedRow, rows)
+                newRows.push(...rows)
             } catch (e) {
                 console.log("originalRow:", originalRow)
                 console.log("updatedRow:", updatedRow)
@@ -129,7 +131,6 @@ const transposeRules = {
             newRow['SOURCE_ID'] += `_tax${i}`
             newRow['GROSS_AMOUNT'] = parseFloat(tax['amount'])
             newRow['DESCRIPTION'] = `Impuesto ${tax['financial_entity'].replaceAll("_", " ")} (${tax['detail'].replaceAll("_", " ")})`
-            updatedRow['BALANCE_AMOUNT'] = parseFloat(updatedRow['BALANCE_AMOUNT']) - newRow['GROSS_AMOUNT']
 
             rows.push(newRow)
         }
@@ -146,7 +147,6 @@ const transposeRules = {
             newRow['SOURCE_ID'] += "_fee"
             newRow['GROSS_AMOUNT'] = fee
             newRow['DESCRIPTION'] = "Comisión + IVA"
-            updatedRow['BALANCE_AMOUNT'] = parseFloat(updatedRow['BALANCE_AMOUNT']) - newRow['GROSS_AMOUNT']
 
             rows.push(newRow)
         }
@@ -155,3 +155,13 @@ const transposeRules = {
     },
 }
 
+function recalculateBalanceAmount(updatedRow, newRows) {
+    const newRowsGrossAmount = newRows.reduce((acc, curr) => acc + parseFloat(curr['GROSS_AMOUNT']), 0)
+
+    updatedRow['BALANCE_AMOUNT'] = parseFloat(updatedRow['BALANCE_AMOUNT']) - newRowsGrossAmount
+
+    let previousBalanceAmount = updatedRow['BALANCE_AMOUNT']
+    for (const row of newRows) {
+        row['BALANCE_AMOUNT'] = previousBalanceAmount + parseFloat(row['GROSS_AMOUNT'])
+    }
+}
