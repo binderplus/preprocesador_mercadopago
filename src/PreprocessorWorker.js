@@ -4,7 +4,7 @@ onmessage = async function (event) {
     const inputFile = event.data
     const [inFileName, inFileExtension] = getNameAndExtension(inputFile);
 
-    const wb = read(await inputFile.bytes(), {type: "array"})
+    const wb = read(await inputFile.arrayBuffer(), {type: "array"})
     const sheet = wb.SheetNames[0];
     let data = utils.sheet_to_json(wb.Sheets[sheet]);
 
