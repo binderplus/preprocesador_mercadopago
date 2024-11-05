@@ -51,7 +51,7 @@ function getReplacementRows(row) {
     const updatedRow = applyUpdateRules(row)
     replacementRows.push(updatedRow)
 
-    const newRows = applyInsertRules(row, updatedRow)
+    const newRows = applyTransposeRules(row, updatedRow)
     replacementRows.push(...newRows)
 
     return replacementRows
@@ -67,7 +67,7 @@ function applyUpdateRules(row) {
 }
 
 function deleteColumnsHandledByInsertRules(row) {
-    for (const rule in insertRules) {
+    for (const rule in transposeRules) {
         if (rule in row) {
             delete row[rule]
         }
@@ -91,9 +91,9 @@ function translateDescription(row) {
 
 }
 
-function applyInsertRules(originalRow, updatedRow) {
+function applyTransposeRules(originalRow, updatedRow) {
     let newRows = []
-    for (const [column, rule] of Object.entries(insertRules)) {
+    for (const [column, rule] of Object.entries(transposeRules)) {
         if (column in originalRow) {
             try {
                 newRows.push(...rule(originalRow, updatedRow))
@@ -108,7 +108,7 @@ function applyInsertRules(originalRow, updatedRow) {
     return newRows
 }
 
-const insertRules = {
+const transposeRules = {
     TAXES_DISAGGREGATED: (originalRow, updatedRow) => {
         let taxes
         try {
