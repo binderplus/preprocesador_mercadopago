@@ -19,65 +19,6 @@ onmessage = async function (event) {
     postMessage(outFile)
 }
 
-function processData(data) {
-    let addedRows = 0
-    let outData = structuredClone(data)
-    for (let [i, row] of data.entries()) {
-        const newRows = getNewRows(row)
-        outData.splice(i + addedRows + 1, 0, ...newRows)
-        addedRows += newRows.length
-    }
-
-    console.log(outData)
-    return outData
-}
-
-function getNewRows(row) {
-    let newRows = []
-
-    for (const [column, rule] of Object.entries(rowRules)) {
-        if (column in row) {
-            newRows.push(...rule(row))
-        }
-    }
-
-    return newRows
-}
-
-const rowRules = {
-    TAXES_DISAGGREGATED: (row) => {
-        let rows = []
-        const taxes = JSON.parse(row['TAXES_DISAGGREGATED'])
-
-        for (const [i, tax] of taxes.entries()) {
-            const newRow = structuredClone(row)
-            newRow['SOURCE_ID'] += `_tax${i}`
-            newRow['TRANSACTION_AMOUNT'] = tax['amount']
-            newRow['TRANSACTION_TYPE'] = `Impuesto ${tax['financial_entity']} ${tax['detail']}`
-
-            rows.push(newRow)
-        }
-
-        return rows
-    },
-
-    FEE_AMOUNT: (row) => {
-        let rows = []
-        const fee = parseFloat(row['FEE_AMOUNT'])
-
-        if (fee !== 0) {
-            const newRow = structuredClone(row)
-            newRow['SOURCE_ID'] += "_fee"
-            newRow['TRANSACTION_AMOUNT'] = fee
-            newRow['TRANSACTION_TYPE'] = "Comisión + IVA"
-
-            rows.push(newRow)
-        }
-
-        return rows
-    },
-}
-
 function getNameAndExtension(file) {
     const path = file.name
 
@@ -87,5 +28,130 @@ function getNameAndExtension(file) {
 
     return [name, extension]
 
+}
+
+function processData(data) {
+    let outData = []
+
+    for (let row of data) {
+        const replacementRows = getReplacementRows(row)
+        outData.push(...replacementRows)
+    }
+
+    console.log(outData)
+    return outData
+}
+
+function getReplacementRows(row) {
+    // Filtra saldo inicial, total, reserve for payout
+    if (!('EXTERNAL_REFERENCE' in row)) return []
+
+    let replacementRows = []
+
+    const updatedRow = applyUpdateRules(row)
+    replacementRows.push(updatedRow)
+
+    const newRows = applyInsertRules(row, updatedRow)
+    replacementRows.push(...newRows)
+
+    return replacementRows
+}
+
+function applyUpdateRules(row) {
+    let updatedRow = structuredClone(row)
+    deleteColumnsHandledByInsertRules(updatedRow)
+    formatDate(updatedRow)
+    translateDescription(updatedRow)
+
+    return updatedRow
+}
+
+function deleteColumnsHandledByInsertRules(row) {
+    for (const rule in insertRules) {
+        if (rule in row) {
+            delete row[rule]
+        }
+    }
+}
+
+function formatDate(row) {
+    if (!('DATE' in row)) return;
+    row['DATE'] = row['DATE'].substring(0, row['DATE'].length - 10).replaceAll("T", " ")
+}
+
+function translateDescription(row) {
+    const translations = {
+        "payment": "Transferencia recibida",
+        "payout": "Transferencia enviada"
+    }
+
+    for (const [key, value] of Object.entries(translations)) {
+        row['DESCRIPTION'] = row['DESCRIPTION'].replaceAll(key, value)
+    }
+
+}
+
+function applyInsertRules(originalRow, updatedRow) {
+    let newRows = []
+    for (const [column, rule] of Object.entries(insertRules)) {
+        if (column in originalRow) {
+            try {
+                newRows.push(...rule(originalRow, updatedRow))
+            } catch (e) {
+                console.log("originalRow:", originalRow)
+                console.log("updatedRow:", updatedRow)
+                throw new Error(`Error on ${column}: ${e.message} \n originalRow: ${originalRow}, \n updatedRow: ${updatedRow}`, {cause: e})
+            }
+        }
+    }
+
+    return newRows
+}
+
+const insertRules = {
+    TAXES_DISAGGREGATED: (originalRow, updatedRow) => {
+        let taxes
+        try {
+            taxes = JSON.parse(originalRow['TAXES_DISAGGREGATED'])
+        } catch (e) {
+            console.warn("Can't parse taxes: ", originalRow['TAXES_DISAGGREGATED'], e)
+            return []
+        }
+
+        if (!Array.isArray(taxes) || !taxes.length) {
+            return []
+        }
+
+        let rows = []
+        for (const [i, tax] of taxes.entries()) {
+            let newRow = structuredClone(updatedRow)
+
+            newRow['SOURCE_ID'] += `_tax${i}`
+            newRow['GROSS_AMOUNT'] = parseFloat(tax['amount'])
+            newRow['DESCRIPTION'] = `Impuesto ${tax['financial_entity'].replaceAll("_", " ")} (${tax['detail'].replaceAll("_", " ")})`
+            updatedRow['BALANCE_AMOUNT'] = parseFloat(updatedRow['BALANCE_AMOUNT']) - newRow['GROSS_AMOUNT']
+
+            rows.push(newRow)
+        }
+
+        return rows
+    },
+
+    FEE_AMOUNT: (originalRow, updatedRow) => {
+        let rows = []
+        const fee = parseFloat(originalRow['FEE_AMOUNT'])
+
+        if (fee !== 0) {
+            let newRow = structuredClone(updatedRow)
+            newRow['SOURCE_ID'] += "_fee"
+            newRow['GROSS_AMOUNT'] = fee
+            newRow['DESCRIPTION'] = "Comisión + IVA"
+            updatedRow['BALANCE_AMOUNT'] = parseFloat(updatedRow['BALANCE_AMOUNT']) - newRow['GROSS_AMOUNT']
+
+            rows.push(newRow)
+        }
+
+        return rows
+    },
 }
 
