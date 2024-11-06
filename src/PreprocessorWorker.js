@@ -1,5 +1,86 @@
 import {read, write, utils} from "xlsx";
 
+// Reglas que transforman columnas en filas. El key es el nombre de la columna a transponer.
+// originalRow: Fila antes de aplicarle updateRules
+// updatedRow: Fila después de aplicarle updateRules
+// Ambas son necesarias porque updateRules puede eliminar columnas necesarias para las nuevas filas.
+const transposeRules = {
+    TAXES_DISAGGREGATED: (originalRow, updatedRow) => {
+        let taxes
+        try {
+            taxes = JSON.parse(originalRow['TAXES_DISAGGREGATED'])
+        } catch (e) {
+            console.warn("Can't parse taxes: ", originalRow['TAXES_DISAGGREGATED'], e)
+            return []
+        }
+
+        if (!Array.isArray(taxes) || !taxes.length) {
+            return []
+        }
+
+        let rows = []
+        for (const [i, tax] of taxes.entries()) {
+            let newRow = structuredClone(updatedRow)
+
+            newRow['SOURCE_ID'] += `_tax${i}`
+            newRow['GROSS_AMOUNT'] = parseFloat(tax['amount'])
+            newRow['DESCRIPTION'] = `Impuesto ${tax['financial_entity'].replaceAll("_", " ")} (${tax['detail'].replaceAll("_", " ")})`
+
+            rows.push(newRow)
+        }
+
+        return rows
+    },
+
+    MP_FEE_AMOUNT: (originalRow, updatedRow) => {
+        let rows = []
+        const fee = parseFloat(originalRow['MP_FEE_AMOUNT'])
+
+        if (fee !== 0) {
+            let newRow = structuredClone(updatedRow)
+            newRow['SOURCE_ID'] += "_fee"
+            newRow['GROSS_AMOUNT'] = fee
+            newRow['DESCRIPTION'] = "Comisión + IVA"
+
+            rows.push(newRow)
+        }
+
+        return rows
+    },
+}
+
+// Reglas que modifican filas.
+const updateRules = [
+    deleteColumnsHandledByTransposeRules,
+    formatDate,
+    translateDescription,
+]
+
+function deleteColumnsHandledByTransposeRules(row) {
+    for (const rule in transposeRules) {
+        if (rule in row) {
+            delete row[rule]
+        }
+    }
+}
+
+function formatDate(row) {
+    if (!('DATE' in row)) return;
+    row['DATE'] = row['DATE'].substring(0, row['DATE'].length - 10).replaceAll("T", " ")
+}
+
+function translateDescription(row) {
+    const translations = {
+        "payment": "Transferencia recibida",
+        "payout": "Transferencia enviada"
+    }
+
+    for (const [key, value] of Object.entries(translations)) {
+        row['DESCRIPTION'] = row['DESCRIPTION'].replaceAll(key, value)
+    }
+
+}
+
 onmessage = async function (event) {
     const inputFile = event.data
     const [inFileName, inFileExtension] = getNameAndExtension(inputFile);
@@ -17,17 +98,6 @@ onmessage = async function (event) {
         {type: inputFile.type}
     )
     postMessage(outFile)
-}
-
-function getNameAndExtension(file) {
-    const path = file.name
-
-    const path_arr = path.split(".")
-    const name = path_arr.slice(0, path_arr.length - 1).join(".")
-    const extension = path_arr[path_arr.length - 1];
-
-    return [name, extension]
-
 }
 
 function processData(data) {
@@ -59,36 +129,12 @@ function getReplacementRows(row) {
 
 function applyUpdateRules(row) {
     let updatedRow = structuredClone(row)
-    deleteColumnsHandledByInsertRules(updatedRow)
-    formatDate(updatedRow)
-    translateDescription(updatedRow)
+
+    for (const updateRule of updateRules) {
+        updateRule(updatedRow)
+    }
 
     return updatedRow
-}
-
-function deleteColumnsHandledByInsertRules(row) {
-    for (const rule in transposeRules) {
-        if (rule in row) {
-            delete row[rule]
-        }
-    }
-}
-
-function formatDate(row) {
-    if (!('DATE' in row)) return;
-    row['DATE'] = row['DATE'].substring(0, row['DATE'].length - 10).replaceAll("T", " ")
-}
-
-function translateDescription(row) {
-    const translations = {
-        "payment": "Transferencia recibida",
-        "payout": "Transferencia enviada"
-    }
-
-    for (const [key, value] of Object.entries(translations)) {
-        row['DESCRIPTION'] = row['DESCRIPTION'].replaceAll(key, value)
-    }
-
 }
 
 function applyTransposeRules(originalRow, updatedRow) {
@@ -110,51 +156,6 @@ function applyTransposeRules(originalRow, updatedRow) {
     return newRows
 }
 
-const transposeRules = {
-    TAXES_DISAGGREGATED: (originalRow, updatedRow) => {
-        let taxes
-        try {
-            taxes = JSON.parse(originalRow['TAXES_DISAGGREGATED'])
-        } catch (e) {
-            console.warn("Can't parse taxes: ", originalRow['TAXES_DISAGGREGATED'], e)
-            return []
-        }
-
-        if (!Array.isArray(taxes) || !taxes.length) {
-            return []
-        }
-
-        let rows = []
-        for (const [i, tax] of taxes.entries()) {
-            let newRow = structuredClone(updatedRow)
-
-            newRow['SOURCE_ID'] += `_tax${i}`
-            newRow['GROSS_AMOUNT'] = parseFloat(tax['amount'])
-            newRow['DESCRIPTION'] = `Impuesto ${tax['financial_entity'].replaceAll("_", " ")} (${tax['detail'].replaceAll("_", " ")})`
-
-            rows.push(newRow)
-        }
-
-        return rows
-    },
-
-    FEE_AMOUNT: (originalRow, updatedRow) => {
-        let rows = []
-        const fee = parseFloat(originalRow['FEE_AMOUNT'])
-
-        if (fee !== 0) {
-            let newRow = structuredClone(updatedRow)
-            newRow['SOURCE_ID'] += "_fee"
-            newRow['GROSS_AMOUNT'] = fee
-            newRow['DESCRIPTION'] = "Comisión + IVA"
-
-            rows.push(newRow)
-        }
-
-        return rows
-    },
-}
-
 function recalculateBalanceAmount(updatedRow, newRows) {
     const newRowsGrossAmount = newRows.reduce((acc, curr) => acc + parseFloat(curr['GROSS_AMOUNT']), 0)
 
@@ -164,4 +165,15 @@ function recalculateBalanceAmount(updatedRow, newRows) {
     for (const row of newRows) {
         row['BALANCE_AMOUNT'] = previousBalanceAmount + parseFloat(row['GROSS_AMOUNT'])
     }
+}
+
+function getNameAndExtension(file) {
+    const path = file.name
+
+    const path_arr = path.split(".")
+    const name = path_arr.slice(0, path_arr.length - 1).join(".")
+    const extension = path_arr[path_arr.length - 1];
+
+    return [name, extension]
+
 }
