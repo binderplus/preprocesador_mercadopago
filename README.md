@@ -7,10 +7,13 @@ específicamente para MP (como, por ejemplo, Odoo).
 Actualmente está optimizado para el caso de uso de empresas que reciben y envían transferencias. 
 Puede no tener toda la funcionalidad necesaria para empresas que venden por Mercado Libre.
 
-Específicamente, elimina las filas de saldo inicial, total de movimientos, reserve for payout 
-(y cualquier otra sin `EXTERNAL_REFERENCE`), cambia el formato de la columna `DATE` para eliminar el huso horario y 
-las fracciones de segundo, traduce algunos términos de la columna `DESCRIPTION`, 
-y toma las columnas `TAXES_DISAGGREGATED` y `MP_FEE_AMOUNT` y las coloca en filas nuevas. 
+Específicamente, hace lo siguiente:
+ - Elimina las filas de saldo inicial, total de movimientos, reserve for payout 
+(y cualquier otra sin `EXTERNAL_REFERENCE`)
+ - Cambia el formato de la columna `DATE` para eliminar el huso horario y 
+las fracciones de segundo
+ - Traduce algunos términos de la columna `DESCRIPTION`, 
+ - Toma las columnas `TAXES_DISAGGREGATED` y `MP_FEE_AMOUNT` y las coloca en filas nuevas. 
 
 Por ejemplo, transforma:
 
