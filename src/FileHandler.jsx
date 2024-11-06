@@ -39,8 +39,8 @@ export const FileHandler = () => {
 
     if (state === "initial") {
         Icon = FaFileArrowUp
-        message = "Arrastre el reporte de todas las operaciones para obtener un reporte con un formato similar al de un extracto bancario tradicional."
-        containerColor = "neutral"
+        message = "Arrastre un archivo o haga click para cargar."
+        containerColor = styles.neutral
     }
 
     if (state === "error") {
