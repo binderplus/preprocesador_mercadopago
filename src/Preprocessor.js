@@ -2,7 +2,6 @@ export function process(file) {
     return new Promise((resolve, reject) => {
         const worker = new Worker(new URL('./PreprocessorWorker.js', import.meta.url), {type: 'module'});
 
-        console.log(file)
         worker.postMessage(file)
 
         worker.onmessage = event => {
