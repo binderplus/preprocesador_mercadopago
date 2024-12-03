@@ -81,6 +81,10 @@ function translateDescription(row) {
 
 }
 
+self.addEventListener('unhandledrejection', function (event) {
+    throw event.reason;
+});
+
 onmessage = async function (event) {
     const inputFile = event.data
     const [inFileName, inFileExtension] = getNameAndExtension(inputFile);
@@ -103,12 +107,14 @@ onmessage = async function (event) {
 function processData(data) {
     let outData = []
 
+    console.log("IN: ", data)
+
     for (let row of data) {
         const replacementRows = getReplacementRows(row)
         outData.push(...replacementRows)
     }
 
-    console.log(outData)
+    console.log("OUT: ", outData)
     return outData
 }
 
