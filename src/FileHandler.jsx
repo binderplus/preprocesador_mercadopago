@@ -1,6 +1,6 @@
 import {useCallback, useState} from 'react'
 import {useDropzone} from 'react-dropzone'
-import {FaFileArrowUp, FaFileCircleCheck, FaFileCircleXmark, FaHourglassHalf} from "react-icons/fa6";
+import {FaFileArrowUp, FaFileCircleCheck, FaFileCircleXmark, FaHourglassHalf, FaCircleXmark} from "react-icons/fa6";
 import {process} from "./Preprocessor.js";
 import styles from './FileHandler.module.css'
 
@@ -27,9 +27,8 @@ export const FileHandler = () => {
         onDropAccepted: onDropAccepted,
         disabled: state === "processing",
         accept: {
-            "application/vnd.ms-excel": [".xlsx", ".xls", ".csv"],
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx", ".xls", ".csv"],
-            "text/csv": [".csv"]
+            "application/vnd.ms-excel": [".xlsx", ".xls"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx", ".xls"]
         }
     })
 
@@ -44,7 +43,7 @@ export const FileHandler = () => {
     }
 
     if (state === "error") {
-        Icon = FaHourglassHalf
+        Icon = FaCircleXmark
         message = error
         containerColor = styles.red
     }
@@ -62,7 +61,7 @@ export const FileHandler = () => {
             containerColor = styles.green
         } else if (isDragReject) {
             Icon = FaFileCircleXmark
-            message = "Solo archivos .csv o .xlsx"
+            message = "Solo archivos .xlsx"
             containerColor = styles.red
         }
     }
