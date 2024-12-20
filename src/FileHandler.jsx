@@ -27,8 +27,9 @@ export const FileHandler = () => {
         onDropAccepted: onDropAccepted,
         disabled: state === "processing",
         accept: {
-            "application/vnd.ms-excel": [".xlsx", ".xls"],
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx", ".xls"]
+            "application/vnd.ms-excel": [".csv"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".csv"],
+            "text/csv": [".csv"]
         }
     })
 
@@ -61,7 +62,7 @@ export const FileHandler = () => {
             containerColor = styles.green
         } else if (isDragReject) {
             Icon = FaFileCircleXmark
-            message = "Solo archivos .xlsx"
+            message = "Solo archivos .csv"
             containerColor = styles.red
         }
     }
