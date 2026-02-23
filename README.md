@@ -7,9 +7,10 @@ específicamente para MP (como, por ejemplo, Odoo).
 Actualmente está optimizado para el caso de uso de empresas que reciben y envían transferencias. 
 Puede no tener toda la funcionalidad necesaria para empresas que venden por Mercado Libre.
 
+**Nota:** Se debe configurar el reporte en Mercado Pago activando la opción "Ocultar movimientos de reserva compensados" para eliminar las líneas de `reserve_for_payout`.
+
 Específicamente, hace lo siguiente:
- - Elimina las filas de saldo inicial, total de movimientos, reserve for payout 
-(y cualquier otra sin `EXTERNAL_REFERENCE`)
+ - Elimina las filas de saldo inicial y total de movimientos (y cualquier otra que no sea de tipo `release`)
  - Cambia el formato de la columna `DATE` para eliminar el huso horario y 
 las fracciones de segundo
  - Traduce algunos términos de la columna `DESCRIPTION`, 
@@ -20,9 +21,7 @@ Por ejemplo, transforma:
 | DATE                          | SOURCE_ID   | EXTERNAL_REFERENCE     | RECORD_TYPE               | DESCRIPTION        | GROSS_AMOUNT | MP_FEE_AMOUNT | TAXES_DISAGGREGATED                                                                                 | BALANCE |
 |-------------------------------|-------------|------------------------|---------------------------|--------------------|--------------|---------------|-----------------------------------------------------------------------------------------------------|---------|
 | 2024-10-01T00:00:00.000-03:00 |             |                        | initial_available_balance |                    |              |               |                                                                                                     | 0       |
-| 2024-10-01T00:00:00.000-03:00 | 95932048395 | 3670377883134          | release                   | payment            | 100000       | -1000         | [{financial_entity":"debitos_creditos", "amount": "-3000", "detail": "tax_withholding_collector"}]" | 96000   |
-| 2024-10-01T13:00:00.000-03:00 | 89344433513 |                        | release                   | reserve_for_payout | -96000       |               | []                                                                                                  | 0       |
-| 2024-10-01T13:00:01.000-03:00 | 89344433513 |                        | release                   | reserve_for_payout | 96000        |               | []                                                                                                  | 96000   |
+| 2024-10-01T00:00:00.000-03:00 | 95932048395 |                        | release                   | payment            | 100000       | -1000         | [{financial_entity":"debitos_creditos", "amount": "-3000", "detail": "tax_withholding_collector"}]" | 96000   |
 | 2024-10-01T13:00:01.000-03:00 | 89344433513 | LEORZG90K0R84X0P9EGJ46 | release                   | payout             | -96000       |               | []                                                                                                  | 0       |
 |                               |             |                        | total                     |                    | 4000         | -1000         |                                                                                                     | 0       |
 
@@ -30,9 +29,9 @@ En:
 
 | DATE                | SOURCE_ID        | EXTERNAL_REFERENCE     | RECORD_TYPE               | DESCRIPTION                                           | GROSS_AMOUNT | BALANCE |
 |---------------------|------------------|------------------------|---------------------------|-------------------------------------------------------|--------------|---------|
-| 2024-10-01 00:00:00 | 95932048395      | 3670377883134          | release                   | Transferencia recibida                                | 100000       | 100000  |
-| 2024-10-01 00:00:00 | 95932048395_tax0 | 3670377883134          | release                   | Impuesto debitos creditos (tax withholding collector) | -3000        | 97000   |
-| 2024-10-01 00:00:00 | 95932048395_fee  | 3670377883134          | release                   | Comisión + IVA                                        | -1000        | 96000   |
+| 2024-10-01 00:00:00 | 95932048395      |                        | release                   | Transferencia recibida                                | 100000       | 100000  |
+| 2024-10-01 00:00:00 | 95932048395_tax0 |                        | release                   | Impuesto debitos creditos (tax withholding collector) | -3000        | 97000   |
+| 2024-10-01 00:00:00 | 95932048395_fee  |                        | release                   | Comisión + IVA                                        | -1000        | 96000   |
 | 2024-10-01 13:00:01 | 89344433513      | LEORZG90K0R84X0P9EGJ46 | release                   | Transferencia enviada                                 | -96000       | 0       |
 
 Para evitar problemas, se recomienda generar el reporte con todas las columnas y en inglés.
