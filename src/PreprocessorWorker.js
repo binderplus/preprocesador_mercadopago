@@ -120,7 +120,7 @@ function processData(data) {
 
 function getReplacementRows(row) {
     // Filtra saldo inicial, total, reserve for payout
-    if (!('EXTERNAL_REFERENCE' in row)) return []
+    if (row['RECORD_TYPE'] !== 'release') return []
 
     let replacementRows = []
 
