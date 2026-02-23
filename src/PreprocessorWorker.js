@@ -51,10 +51,20 @@ const transposeRules = {
 
 // Reglas que modifican filas.
 const updateRules = [
+    coerceIdsToString,
     deleteColumnsHandledByTransposeRules,
     formatDate,
     translateDescription,
 ]
+
+function coerceIdsToString(row) {
+    const idColumns = ['SOURCE_ID', 'EXTERNAL_REFERENCE', 'PAYER_ID_NUMBER', 'PAYOUT_BANK_ACCOUNT_NUMBER']
+    for (const col of idColumns) {
+        if (col in row && typeof row[col] === 'number') {
+            row[col] = String(row[col])
+        }
+    }
+}
 
 function deleteColumnsHandledByTransposeRules(row) {
     for (const rule in transposeRules) {
